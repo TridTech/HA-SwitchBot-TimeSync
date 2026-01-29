@@ -7,10 +7,23 @@
   "documentation": "https://github.com/yourusername/switchbot_meter_time_sync",
   "iot_class": "local_push",
   "requirements": ["bleak>=0.21.0", "bleak-retry-connector>=3.1.0"],
-  "version": "1.0.0",
+  "version": "1.0.1",
   "bluetooth": [
     {
-      "local_name": "WoSensorTH*"
+      "local_name": "WoSensorTH*",
+      "connectable": true
+    },
+    {
+      "service_data_uuid": "0000fd3d-0000-1000-8000-00805f9b34fb",
+      "connectable": true
+    },
+    {
+      "service_uuid": "cba20d00-224d-11e6-9fb8-0002a5d5c51b",
+      "connectable": true
+    },
+    {
+      "manufacturer_id": 2409,
+      "connectable": true
     }
   ]
 }
