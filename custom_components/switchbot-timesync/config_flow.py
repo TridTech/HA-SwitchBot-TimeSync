@@ -14,7 +14,15 @@ from homeassistant.components.bluetooth import (
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import DOMAIN, DEVICE_TYPE_METER, DEVICE_TYPE_METER_PRO, DEVICE_TYPE_METER_PRO_CO2
+from .const import (
+    DOMAIN,
+    DEVICE_TYPE_METER,
+    DEVICE_TYPE_METER_ADD,
+    DEVICE_TYPE_METER_PRO,
+    DEVICE_TYPE_METER_PRO_CO2,
+    MANUFACTURER_ID,
+    SERVICE_DATA_UUID,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +41,11 @@ class SwitchBotMeterTimeSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN)
         self, discovery_info: BluetoothServiceInfoBleak
     ) -> FlowResult:
         """Handle the bluetooth discovery step."""
+        _LOGGER.debug("Bluetooth discovery triggered for device: %s", discovery_info.address)
+        _LOGGER.debug("Discovery info: name=%s, rssi=%s", discovery_info.name, discovery_info.rssi)
+        _LOGGER.debug("Service data: %s", discovery_info.service_data)
+        _LOGGER.debug("Manufacturer data: %s", discovery_info.manufacturer_data)
+        
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
         
@@ -40,6 +53,7 @@ class SwitchBotMeterTimeSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN)
         
         # Check if this is a supported SwitchBot Meter device
         if not self._is_supported_device(discovery_info):
+            _LOGGER.debug("Device %s is not a supported SwitchBot Meter", discovery_info.address)
             return self.async_abort(reason="not_supported")
         
         return await self.async_step_confirm()
@@ -53,20 +67,35 @@ class SwitchBotMeterTimeSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN)
             await self.async_set_unique_id(address)
             self._abort_if_unique_id_configured()
             
+            # Get device info for title
+            device_info = self._discovered_devices.get(address)
+            if device_info:
+                title = self._get_device_title(device_info)
+            else:
+                title = f"SwitchBot Meter ({address[-5:]})"
+            
             return self.async_create_entry(
-                title=f"SwitchBot Meter ({address[-5:]})",
+                title=title,
                 data={CONF_ADDRESS: address},
             )
 
         # Scan for SwitchBot devices
         current_addresses = self._async_current_ids()
+        discovered_count = 0
+        
         for discovery_info in async_discovered_service_info(self.hass):
             address = discovery_info.address
             if address in current_addresses or address in self._discovered_devices:
                 continue
             
+            _LOGGER.debug("Checking device %s: %s", address, discovery_info.name)
+            
             if self._is_supported_device(discovery_info):
                 self._discovered_devices[address] = discovery_info
+                discovered_count += 1
+                _LOGGER.info("Found SwitchBot Meter: %s (%s)", address, discovery_info.name)
+
+        _LOGGER.debug("Found %d SwitchBot Meter devices", discovered_count)
 
         if not self._discovered_devices:
             return self.async_abort(reason="no_devices_found")
@@ -75,7 +104,7 @@ class SwitchBotMeterTimeSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN)
             {
                 vol.Required(CONF_ADDRESS): vol.In(
                     {
-                        address: f"{info.name or 'SwitchBot Meter'} ({address})"
+                        address: self._get_device_display_name(info)
                         for address, info in self._discovered_devices.items()
                     }
                 ),
@@ -89,8 +118,9 @@ class SwitchBotMeterTimeSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN)
     ) -> FlowResult:
         """Confirm the setup."""
         if user_input is not None or not self.show_advanced_options:
+            title = self._get_device_title(self._discovery_info)
             return self.async_create_entry(
-                title=self._discovery_info.name or f"SwitchBot Meter ({self._discovery_info.address[-5:]})",
+                title=title,
                 data={CONF_ADDRESS: self._discovery_info.address},
             )
 
@@ -103,16 +133,86 @@ class SwitchBotMeterTimeSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN)
 
     def _is_supported_device(self, discovery_info: BluetoothServiceInfoBleak) -> bool:
         """Check if the device is a supported SwitchBot Meter."""
-        # Check local name
-        if discovery_info.name and "WoSensorTH" in discovery_info.name:
-            return True
+        # Method 1: Check local name
+        if discovery_info.name:
+            name_lower = discovery_info.name.lower()
+            if "wosensorth" in name_lower or "woiosensorth" in name_lower:
+                _LOGGER.debug("Device identified by name: %s", discovery_info.name)
+                return True
         
-        # Check manufacturer data for device type
-        service_data = discovery_info.service_data
-        for uuid_str, data in service_data.items():
-            if len(data) > 0:
-                device_type = data[0] & 0x7F  # Lower 7 bits
-                if device_type in (DEVICE_TYPE_METER, DEVICE_TYPE_METER_PRO, DEVICE_TYPE_METER_PRO_CO2):
-                    return True
+        # Method 2: Check service data for device type
+        for uuid_str, data in discovery_info.service_data.items():
+            # Check for the short UUID (fd3d) or full UUID
+            if "fd3d" in uuid_str.lower() or SERVICE_DATA_UUID.lower() in uuid_str.lower():
+                if len(data) > 0:
+                    device_type = data[0] & 0x7F  # Lower 7 bits
+                    _LOGGER.debug("Service data UUID %s, device type: 0x%02x", uuid_str, device_type)
+                    if device_type in (
+                        DEVICE_TYPE_METER,
+                        DEVICE_TYPE_METER_ADD,
+                        DEVICE_TYPE_METER_PRO,
+                        DEVICE_TYPE_METER_PRO_CO2,
+                    ):
+                        _LOGGER.debug("Device identified by service data type: 0x%02x", device_type)
+                        return True
+        
+        # Method 3: Check manufacturer data
+        for mfr_id, data in discovery_info.manufacturer_data.items():
+            if mfr_id == MANUFACTURER_ID and len(data) >= 12:
+                # SwitchBot Meter devices have specific manufacturer data patterns
+                _LOGGER.debug("Device has SwitchBot manufacturer ID: %d", mfr_id)
+                # This could be a Meter device, accept it
+                return True
         
         return False
+
+    def _get_device_type_name(self, discovery_info: BluetoothServiceInfoBleak) -> str:
+        """Get a friendly device type name."""
+        for uuid_str, data in discovery_info.service_data.items():
+            if "fd3d" in uuid_str.lower() and len(data) > 0:
+                device_type = data[0] & 0x7F
+                if device_type in (DEVICE_TYPE_METER, DEVICE_TYPE_METER_ADD):
+                    return "Meter/Meter Plus"
+                elif device_type == DEVICE_TYPE_METER_PRO:
+                    return "Meter Pro"
+                elif device_type == DEVICE_TYPE_METER_PRO_CO2:"""Constants for the SwitchBot Meter Time Sync integration."""
+
+DOMAIN = "switchbot_meter_time_sync"
+
+# SwitchBot BLE UUIDs
+SERVICE_UUID = "cba20d00-224d-11e6-9fb8-0002a5d5c51b"
+WRITE_CHARACTERISTIC_UUID = "cba20002-224d-11e6-9fb8-0002a5d5c51b"
+NOTIFY_CHARACTERISTIC_UUID = "cba20003-224d-11e6-9fb8-0002a5d5c51b"
+
+# Service data UUID (short form: 0xfd3d, long form below)
+SERVICE_DATA_UUID = "0000fd3d-0000-1000-8000-00805f9b34fb"
+
+# Manufacturer ID for SwitchBot
+MANUFACTURER_ID = 2409  # 0x0969
+
+# Command constants
+COMMAND_MAGIC_NUMBER = 0x57
+COMMAND_HEADER = 0x09  # Time management command
+SUBCMD_SET_TIME = 0x01
+
+# Device types in broadcast (from service data byte 0, lower 7 bits)
+DEVICE_TYPE_METER = 0x54  # 'T' - WoSensorTH (Meter/Meter Plus) Normal Mode
+DEVICE_TYPE_METER_ADD = 0x74  # 't' - WoSensorTH Add Mode  
+DEVICE_TYPE_METER_PRO = 0x77  # 'w' - Meter Pro (W3400010)
+DEVICE_TYPE_METER_PRO_CO2 = 0x7A  # 'z' - Meter Pro CO2
+                    return "Meter Pro CO2"
+        
+        return "Meter"
+
+    def _get_device_display_name(self, discovery_info: BluetoothServiceInfoBleak) -> str:
+        """Get display name for device selection."""
+        device_type = self._get_device_type_name(discovery_info)
+        name = discovery_info.name or device_type
+        address_short = discovery_info.address[-8:].replace(":", "")
+        return f"{name} ({address_short})"
+
+    def _get_device_title(self, discovery_info: BluetoothServiceInfoBleak) -> str:
+        """Get title for the config entry."""
+        device_type = self._get_device_type_name(discovery_info)
+        address_short = discovery_info.address[-8:].replace(":", "")
+        return f"SwitchBot {device_type} ({address_short})"
