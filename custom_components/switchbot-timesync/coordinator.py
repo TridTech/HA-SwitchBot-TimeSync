@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import struct
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from bleak import BleakClient, BleakError
@@ -75,9 +75,16 @@ class SwitchBotMeterCoordinator(DataUpdateCoordinator):
         try:
             client = await self._async_connect()
             
+            # Get an aware datetime object for the local time zone
+            local_aware_datetime = datetime.now().astimezone()
+            
+            # Get the UTC offset as a timedelta object
+            offset_timedelta = local_aware_datetime.utcoffset()
+            
             # Get current time as Unix timestamp
             now = datetime.now(timezone.utc)
-            timestamp = int(now.timestamp())
+            final = now + offset_timedelta - timedelta(hours=2)
+            timestamp = int(final.timestamp())
             
             # Build the command packet
             # Format: 0x57 (magic) + 0x09 (time cmd) + 0x01 (subcmd) + timestamp (4 bytes, big endian)
@@ -88,7 +95,7 @@ class SwitchBotMeterCoordinator(DataUpdateCoordinator):
             ])
             
             # Add timestamp as 4 bytes in big endian
-            command.extend(struct.pack('>I', timestamp))
+            command.extend(struct.pack('>Q', timestamp))
             
             _LOGGER.debug(
                 "Sending time sync command to %s: %s (timestamp: %d)",
