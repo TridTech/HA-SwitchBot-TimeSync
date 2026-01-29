@@ -1,0 +1,26 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Select SwitchBot Meter",
+        "description": "Select the SwitchBot Meter device you want to sync time to.",
+        "data": {
+          "address": "Device"
+        }
+      },
+      "confirm": {
+        "title": "Add SwitchBot Meter Time Sync",
+        "description": "Do you want to add time sync functionality for {name}?"
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to device",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "no_devices_found": "No SwitchBot Meter devices found",
+      "not_supported": "This device is not supported"
+    }
+  }
+}

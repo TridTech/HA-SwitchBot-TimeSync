@@ -1,0 +1,223 @@
+# Example Automations for SwitchBot Meter Time Sync
+
+# Copy these to your automations.yaml file and modify the entity_id to match your device
+
+# ============================================================================
+# DAILY TIME SYNC - Sync once per day at midnight
+# ============================================================================
+- id: switchbot_meter_daily_sync
+  alias: "SwitchBot Meter - Daily Time Sync"
+  description: "Sync time to SwitchBot Meter every day at midnight"
+  trigger:
+    - platform: time
+      at: "00:00:00"
+  action:
+    - service: button.press
+      target:
+        entity_id: button.switchbot_meter_XXXXX_sync_time
+
+# ============================================================================
+# TWICE DAILY TIME SYNC - Sync at midnight and noon
+# ============================================================================
+- id: switchbot_meter_twice_daily_sync
+  alias: "SwitchBot Meter - Twice Daily Time Sync"
+  description: "Sync time to SwitchBot Meter at midnight and noon"
+  trigger:
+    - platform: time
+      at: 
+        - "00:00:00"
+        - "12:00:00"
+  action:
+    - service: button.press
+      target:
+        entity_id: button.switchbot_meter_XXXXX_sync_time
+
+# ============================================================================
+# WEEKLY TIME SYNC - Sync every Sunday at 3 AM
+# ============================================================================
+- id: switchbot_meter_weekly_sync
+  alias: "SwitchBot Meter - Weekly Time Sync"
+  description: "Sync time to SwitchBot Meter every Sunday at 3 AM"
+  trigger:
+    - platform: time
+      at: "03:00:00"
+  condition:
+    - condition: time
+      weekday:
+        - sun
+  action:
+    - service: button.press
+      target:
+        entity_id: button.switchbot_meter_XXXXX_sync_time
+
+# ============================================================================
+# SYNC ON HOME ASSISTANT RESTART - Sync when HA starts
+# ============================================================================
+- id: switchbot_meter_startup_sync
+  alias: "SwitchBot Meter - Sync on HA Start"
+  description: "Sync time to SwitchBot Meter when Home Assistant starts"
+  trigger:
+    - platform: homeassistant
+      event: start
+  action:
+    - delay: "00:01:00"  # Wait for Bluetooth to fully initialize
+    - service: button.press
+      target:
+        entity_id: button.switchbot_meter_XXXXX_sync_time
+
+# ============================================================================
+# SYNC AFTER POWER OUTAGE - Detect power loss and resync
+# ============================================================================
+- id: switchbot_meter_power_outage_sync
+  alias: "SwitchBot Meter - Sync After Power Outage"
+  description: "Sync time after a power outage is detected"
+  trigger:
+    - platform: homeassistant
+      event: start
+  condition:
+    # This assumes you have a way to detect if there was a power outage
+    # Adjust based on your setup
+    - condition: template
+      value_template: >
+        {{ (now() - states.sensor.uptime.last_changed).total_seconds() < 300 }}
+  action:
+    - delay: "00:02:00"  # Wait longer to ensure system stability
+    - service: button.press
+      target:
+        entity_id: button.switchbot_meter_XXXXX_sync_time
+
+# ============================================================================
+# DAYLIGHT SAVING TIME SYNC - Sync on DST change days
+# This is a simplified version - adjust dates for your timezone
+# ============================================================================
+- id: switchbot_meter_dst_sync
+  alias: "SwitchBot Meter - DST Time Sync"
+  description: "Sync time on daylight saving time change days"
+  trigger:
+    - platform: time
+      at: "03:00:00"
+  condition:
+    # Spring forward: Second Sunday in March
+    # Fall back: First Sunday in November
+    - condition: template
+      value_template: >
+        {% set today = now().date() %}
+        {% set month = now().month %}
+        {% set day = now().day %}
+        {% set weekday = now().weekday() %}
+        {# Check if it's the second Sunday of March or first Sunday of November #}
+        {% if month == 3 and weekday == 6 and day >= 8 and day <= 14 %}
+          true
+        {% elif month == 11 and weekday == 6 and day >= 1 and day <= 7 %}
+          true
+        {% else %}
+          false
+        {% endif %}
+  action:
+    - service: button.press
+      target:
+        entity_id: button.switchbot_meter_XXXXX_sync_time
+    - service: persistent_notification.create
+      data:
+        title: "SwitchBot Time Sync"
+        message: "Time synced for Daylight Saving Time change"
+
+# ============================================================================
+# MULTIPLE DEVICES - Sync all SwitchBot Meters at once
+# ============================================================================
+- id: switchbot_meters_all_sync
+  alias: "SwitchBot Meters - Sync All Devices"
+  description: "Sync time to all SwitchBot Meter devices"
+  trigger:
+    - platform: time
+      at: "00:00:00"
+  action:
+    # Sync all your SwitchBot Meter devices
+    - service: button.press
+      target:
+        entity_id:
+          - button.switchbot_meter_12345_sync_time
+          - button.switchbot_meter_67890_sync_time
+          - button.switchbot_meter_abcde_sync_time
+
+# ============================================================================
+# CONDITIONAL SYNC - Only sync if battery is not low
+# Requires battery sensor from main SwitchBot integration
+# ============================================================================
+- id: switchbot_meter_conditional_sync
+  alias: "SwitchBot Meter - Conditional Sync"
+  description: "Sync time only if battery level is adequate"
+  trigger:
+    - platform: time
+      at: "00:00:00"
+  condition:
+    - condition: numeric_state
+      entity_id: sensor.switchbot_meter_battery
+      above: 20  # Only sync if battery is above 20%
+  action:
+    - service: button.press
+      target:
+        entity_id: button.switchbot_meter_XXXXX_sync_time
+
+# ============================================================================
+# NOTIFICATION ON SYNC - Get notified when time is synced
+# ============================================================================
+- id: switchbot_meter_notify_sync
+  alias: "SwitchBot Meter - Notify on Sync"
+  description: "Send notification after syncing time"
+  trigger:
+    - platform: time
+      at: "00:00:00"
+  action:
+    - service: button.press
+      target:
+        entity_id: button.switchbot_meter_XXXXX_sync_time
+    - delay: "00:00:05"  # Wait for sync to complete
+    - service: notify.mobile_app_your_phone
+      data:
+        title: "SwitchBot Time Sync"
+        message: "Daily time sync completed for SwitchBot Meter"
+
+# ============================================================================
+# RETRY ON FAILURE - Try syncing multiple times if needed
+# ============================================================================
+- id: switchbot_meter_retry_sync
+  alias: "SwitchBot Meter - Retry Sync"
+  description: "Retry time sync if it fails"
+  trigger:
+    - platform: time
+      at: "00:00:00"
+  action:
+    - repeat:
+        count: 3
+        sequence:
+          - service: button.press
+            target:
+              entity_id: button.switchbot_meter_XXXXX_sync_time
+          - delay: "00:01:00"  # Wait 1 minute between retries
+
+# ============================================================================
+# SCHEDULE-BASED SYNC - Different times for different days
+# ============================================================================
+- id: switchbot_meter_schedule_sync
+  alias: "SwitchBot Meter - Schedule-Based Sync"
+  description: "Sync at different times based on day of week"
+  trigger:
+    - platform: time
+      at: "00:00:00"
+      id: "midnight"
+    - platform: time
+      at: "12:00:00"
+      id: "noon"
+  condition:
+    - condition: template
+      value_template: >
+        {% if trigger.id == "midnight" %}
+          {{ now().weekday() in [0, 2, 4, 6] }}
+        {% else %}
+          {{ now().weekday() in [1, 3, 5] }}
+        {% endif %}
+  action:
+    - service: button.press
+      target:
+        entity_id: button.switchbot_meter_XXXXX_sync_time
