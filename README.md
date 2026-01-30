@@ -1,4 +1,10 @@
-This was entirely created with Claude.ai starting with the following prompt:
+This was (almost) entirely created with a free Claude.ai account.  You can see the Claude created readme for more details on this -> [README-Claude.md](README-Claude.md)
+
+There are a TON of extra description files created by Claude that are included as informational.
+
+
+
+Started with the following prompt:
 
 _I need to create an integration for homeassistant that will sync the time to a switchbot meter pro device over bluetooth without using the switchbot app_
 
@@ -10,14 +16,9 @@ Final prompt that tried to move it to Little Endian:
 
 _That worked better!  The integration is recognizing the switchbot meter.  However, using the integration, the time was set to 2:00 on January 1st._
 
-After Claude:
+Still issues with the timestamp.  Claude is stuck on _long_ instead of _long long_.  
 
-- Changed format to big endian long long to get all 8 bytes. ('>Q' instead of '<I')
-- Added Timezone offset code to coordinator.  Otherwise you get UTC.
-
-Stuff that still does not work:
-
-- button has a few references to self.hass.  They seem to error out with "'AttributeError: 'HomeAssistant' object has no attribute 'components'"
+Button has a few references to self.hass.  They seem to error out with "'AttributeError: 'HomeAssistant' object has no attribute 'components'".  They are entirely centered around notifications, which are a little weird.  Leaving in place for the moment to see how Claude deals with it.
 
 Continuing with Claude:
 
@@ -37,5 +38,4 @@ Almost there, but not the proper timestamp format again.
 
 _This command was wrong: "command.extend(struct.pack('<I', timestamp))".  I had to move it to "command.extend(struct.pack('<Q', timestamp))" in order to get good time on the device.  Switchbot uses a long long big endian for the timestamp_
 
-
-Note that in the prompt, I used the wrong command, but the correct info.  Claude prioritized my description over the code snippet, and put the correct format '>Q'.
+Note that in the prompt, I used the wrong command, but the correct info.  Claude prioritized my description over the code snippet, and put the correct format '>Q'. After the file was created, the notification chunks were commented out of the button.py file, as they seemed more annoying than helpful.
