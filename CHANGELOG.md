@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.5] - 2026-01-29
+
+### Fixed
+- **CRITICAL**: Fixed AttributeError preventing integration removal
+  - Changed `self.config_entry` to `self._config_entry` in OptionsFlowHandler
+  - This was blocking integration unload/removal
+- Improved coordinator shutdown handling
+  - Properly disconnects Bluetooth on integration removal
+  - Uses `.pop(entry_id, None)` to avoid KeyError on cleanup
+
+### Changed
+- Better error handling in unload process
+
 ## [1.0.4] - 2026-01-29
 
 ### Added
