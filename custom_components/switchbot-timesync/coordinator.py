@@ -114,15 +114,16 @@ class SwitchBotMeterCoordinator(DataUpdateCoordinator):
             )
             
             # Build the command packet
-            # Format: 0x57 (magic) + 0x09 (time cmd) + 0x01 (subcmd) + timestamp (4 bytes, LITTLE endian)
+            # Format: 0x57 (magic) + 0x09 (time cmd) + 0x01 (subcmd) + timestamp (8 bytes, BIG endian long long)
             command = bytearray([
                 COMMAND_MAGIC_NUMBER,
                 COMMAND_HEADER,
                 SUBCMD_SET_TIME,
             ])
             
-            # Add timestamp as 4 bytes in LITTLE endian (BLE GATT standard)
-            command.extend(struct.pack('<I', timestamp))
+            # Add timestamp as 8 bytes in BIG endian (long long format)
+            # SwitchBot uses 64-bit big-endian timestamp
+            command.extend(struct.pack('>Q', timestamp))
             
             _LOGGER.debug(
                 "Sending time sync command to %s: %s (timestamp: %d)",
