@@ -1,7 +1,7 @@
 {
-  "name": "SwitchBot Meter Time Sync",
+  "name": "SwitchBot Time Sync",
   "content_in_root": false,
-  "filename": "switchbot_meter_time_sync",
+  "filename": "switchbot_time_sync",
   "render_readme": true,
   "homeassistant": "2024.1.0"
 }
