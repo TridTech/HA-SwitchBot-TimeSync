@@ -32,3 +32,10 @@ _datetime.now when converted to timestamp still converts to UTC.  Also, if there
 Claude did a better job on this one.
 
 _The code is preventing the removal of the integration.  I'm also not seeing a configuration screen with the offset option for the devices installed.  The error from the log is: "AttributeError: property 'config_entry' of 'OptionsFlowHandler' object has no setter"_
+
+Almost there, but not the proper timestamp format again.
+
+_This command was wrong: "command.extend(struct.pack('<I', timestamp))".  I had to move it to "command.extend(struct.pack('<Q', timestamp))" in order to get good time on the device.  Switchbot uses a long long big endian for the timestamp_
+
+
+Note that in the prompt, I used the wrong command, but the correct info.  Claude prioritized my description over the code snippet, and put the correct format '>Q'.
