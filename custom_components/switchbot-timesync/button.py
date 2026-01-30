@@ -67,13 +67,21 @@ class SwitchBotMeterTimeSyncButton(ButtonEntity):
         success = await self._coordinator.async_sync_time()
         
         if success:
-            self.hass.components.persistent_notification.async_create(
-                f"Successfully synced time to SwitchBot Meter {self._address[-5:]}",
-                title="SwitchBot Time Sync",
+            await self.hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "message": f"Successfully synced time to SwitchBot Meter {self._address[-5:]}",
+                    "title": "SwitchBot Time Sync",
+                },
             )
         else:
-            self.hass.components.persistent_notification.async_create(
-                f"Failed to sync time to SwitchBot Meter {self._address[-5:]}. "
-                "Please ensure the device is in range and try again.",
-                title="SwitchBot Time Sync Error",
+            await self.hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "message": f"Failed to sync time to SwitchBot Meter {self._address[-5:]}. "
+                    "Please ensure the device is in range and try again.",
+                    "title": "SwitchBot Time Sync Error",
+                },
             )
