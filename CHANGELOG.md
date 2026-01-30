@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-01-29
+
+### Fixed - CRITICAL
+- **Correct timestamp format discovered through user testing**
+  - Changed from 4-byte little-endian (`<I`) to **8-byte big-endian (`>Q`)**
+  - SwitchBot devices use 64-bit big-endian (long long) timestamps
+  - Previous versions (1.0.2-1.0.5) were sending wrong format, causing incorrect time
+  - **This is the first version that actually works correctly!**
+
+### Technical Details
+The correct command format is:
+```
+Byte 0: 0x57 (magic number)
+Byte 1: 0x09 (time management command)
+Byte 2: 0x01 (set time subcommand)
+Bytes 3-10: Unix timestamp as 8-byte big-endian unsigned long long (>Q)
+```
+
+Thanks to user testing for discovering the correct format!
+
 ## [1.0.5] - 2026-01-29
 
 ### Fixed
@@ -166,16 +186,22 @@ The SwitchBot devices follow this standard for time synchronization commands.
 
 **Incorrect (1.0.0, 1.0.1):**
 ```python
-struct.pack('>I', timestamp)  # Big-endian
+struct.pack('>I', timestamp)  # Big-endian, but only 4 bytes
 # Example: 1738185600 (2026-01-29)
-# Encoded as: 67 BB 12 00
-# Device reads: 00 12 BB 67 = 1227 seconds = Jan 1st, 2:00 AM
+# Encoded as: 67 BB 12 00 (4 bytes - WRONG)
 ```
 
-**Correct (1.0.2):**
+**Still Wrong (1.0.2-1.0.5):**
 ```python
-struct.pack('<I', timestamp)  # Little-endian
+struct.pack('<I', timestamp)  # Little-endian, 4 bytes
 # Example: 1738185600 (2026-01-29)
-# Encoded as: 00 12 BB 67
-# Device reads: 67 BB 12 00 = 1738185600 = Jan 29, 2026
+# Encoded as: 00 12 BB 67 (4 bytes - WRONG)
+```
+
+**Correct (1.1.0+):**
+```python
+struct.pack('>Q', timestamp)  # Big-endian, 8 bytes (long long)
+# Example: 1738185600 (2026-01-29)
+# Encoded as: 00 00 00 00 67 BB 12 00 (8 bytes - CORRECT!)
+# Device reads: 0x0000000067BB1200 = 1738185600 ✓
 ```

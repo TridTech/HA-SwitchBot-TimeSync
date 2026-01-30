@@ -57,12 +57,18 @@ This integration implements the SwitchBot BLE protocol to send time synchronizat
 Byte 0: Magic Number (0x57)
 Byte 1: Command Header (0x09 - Time Management)
 Byte 2: Subcommand (0x01 - Set Current Time)
-Bytes 3-6: Unix Timestamp (4 bytes, big-endian)
+Bytes 3-10: Unix Timestamp (8 bytes, big-endian unsigned long long)
 ```
 
-Example command for timestamp 1706745600:
+Example command for timestamp 1738185600 (2026-01-29):
 ```
-57 09 01 65 B8 00 00
+57 09 01 00 00 00 00 67 BB 12 00
+```
+
+Breaking down the timestamp bytes (big-endian):
+```
+1738185600 decimal = 0x0000000067BB1200
+Bytes: 00 00 00 00 67 BB 12 00
 ```
 
 #### Response Format

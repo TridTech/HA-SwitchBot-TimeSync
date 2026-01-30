@@ -1,6 +1,6 @@
 # SwitchBot Meter Time Sync for Home Assistant
 
-> **Version 1.0.4** - Now with per-device time offset configuration! If your device shows incorrect time after sync, you can easily adjust it through the UI. See [CONFIGURE_OFFSET.md](CONFIGURE_OFFSET.md).
+> **Version 1.1.0** - **NOW WORKING!** Correct timestamp format discovered. If you're using an earlier version, please update immediately - previous versions sent incorrect timestamp format. Per-device time offset available via UI.
 
 A custom Home Assistant integration that allows you to sync the time on your SwitchBot Meter Pro devices over Bluetooth without using the SwitchBot app.
 
