@@ -30,3 +30,5 @@ Fixed attributeerror, tried to add offset code, but the code I did worked while 
 _datetime.now when converted to timestamp still converts to UTC.  Also, if there is going to be a configurable offset, it should be configurable by device, not just system wide_
 
 Claude did a better job on this one.
+
+_The code is preventing the removal of the integration.  I'm also not seeing a configuration screen with the offset option for the devices installed.  The error from the log is: "AttributeError: property 'config_entry' of 'OptionsFlowHandler' object has no setter"_
