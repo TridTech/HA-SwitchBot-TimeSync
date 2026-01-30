@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import struct
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from bleak import BleakClient, BleakError
@@ -13,6 +13,7 @@ from bleak_retry_connector import establish_connection
 from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.config_entries import ConfigEntry
 
 from .const import (
     COMMAND_HEADER,
@@ -20,6 +21,8 @@ from .const import (
     NOTIFY_CHARACTERISTIC_UUID,
     SUBCMD_SET_TIME,
     WRITE_CHARACTERISTIC_UUID,
+    CONF_TIME_OFFSET,
+    DEFAULT_TIME_OFFSET_HOURS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,6 +36,7 @@ class SwitchBotMeterCoordinator(DataUpdateCoordinator):
         hass: HomeAssistant,
         service_info: BluetoothServiceInfoBleak,
         address: str,
+        entry: ConfigEntry,
     ) -> None:
         """Initialize."""
         super().__init__(
@@ -42,6 +46,7 @@ class SwitchBotMeterCoordinator(DataUpdateCoordinator):
         )
         self._service_info = service_info
         self._address = address
+        self._entry = entry
         self._client: BleakClient | None = None
 
     async def _async_connect(self) -> BleakClient:
@@ -75,27 +80,49 @@ class SwitchBotMeterCoordinator(DataUpdateCoordinator):
         try:
             client = await self._async_connect()
             
-            # Get an aware datetime object for the local time zone
-            local_aware_datetime = datetime.now().astimezone()
+            # Get current local time
+            # Note: datetime.now().timestamp() converts to UTC, so we need to be careful
+            # We want the Unix timestamp that represents the local wall-clock time
             
-            # Get the UTC offset as a timedelta object
-            offset_timedelta = local_aware_datetime.utcoffset()
+            # Get local time
+            local_time = datetime.now()
             
-            # Get current time as Unix timestamp
-            now = datetime.now(timezone.utc)
-            final = now + offset_timedelta - timedelta(hours=2)
-            timestamp = int(final.timestamp())
+            # Get the configured time offset for this device
+            time_offset = self._entry.options.get(CONF_TIME_OFFSET, DEFAULT_TIME_OFFSET_HOURS)
+            
+            # Apply offset if configured
+            if time_offset != 0:
+                local_time = local_time + timedelta(hours=time_offset)
+                _LOGGER.debug(
+                    "Applied time offset of %d hours for %s",
+                    time_offset,
+                    self._address,
+                )
+            
+            # Convert to Unix timestamp
+            # This is seconds since Jan 1, 1970 00:00:00 UTC
+            # BUT we're treating local_time as if it were UTC to get the "local" timestamp
+            # This is what the device expects
+            timestamp = int(local_time.timestamp())
+            
+            _LOGGER.debug(
+                "Preparing time sync for %s: Local time: %s, Offset: %d hours, Timestamp: %d",
+                self._address,
+                local_time.strftime("%Y-%m-%d %H:%M:%S"),
+                time_offset,
+                timestamp,
+            )
             
             # Build the command packet
-            # Format: 0x57 (magic) + 0x09 (time cmd) + 0x01 (subcmd) + timestamp (4 bytes, big endian)
+            # Format: 0x57 (magic) + 0x09 (time cmd) + 0x01 (subcmd) + timestamp (4 bytes, LITTLE endian)
             command = bytearray([
                 COMMAND_MAGIC_NUMBER,
                 COMMAND_HEADER,
                 SUBCMD_SET_TIME,
             ])
             
-            # Add timestamp as 4 bytes in big endian
-            command.extend(struct.pack('>Q', timestamp))
+            # Add timestamp as 4 bytes in LITTLE endian (BLE GATT standard)
+            command.extend(struct.pack('<I', timestamp))
             
             _LOGGER.debug(
                 "Sending time sync command to %s: %s (timestamp: %d)",

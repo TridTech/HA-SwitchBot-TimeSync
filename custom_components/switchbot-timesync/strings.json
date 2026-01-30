@@ -22,5 +22,19 @@
       "no_devices_found": "No SwitchBot Meter devices found",
       "not_supported": "This device is not supported"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Time Sync Options",
+        "description": "Configure time synchronization settings for this device.",
+        "data": {
+          "time_offset_hours": "Time offset (hours)"
+        },
+        "data_description": {
+          "time_offset_hours": "Adjust if device shows incorrect time after sync. Use negative values if device is ahead (e.g., -2 if device shows 2 hours ahead). Range: -12 to +12 hours."
+        }
+      }
+    }
   }
 }

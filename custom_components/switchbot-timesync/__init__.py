@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
 
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
@@ -11,7 +10,6 @@ from homeassistant.components.bluetooth import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .coordinator import SwitchBotMeterCoordinator
@@ -36,17 +34,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Could not find SwitchBot device with address %s", address)
         return False
     
-    # Create coordinator
-    coordinator = SwitchBotMeterCoordinator(hass, service_info, address)
+    # Create coordinator with config entry
+    coordinator = SwitchBotMeterCoordinator(hass, service_info, address, entry)
     
     # Store coordinator
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
     
+    # Register options update listener
+    entry.async_on_unload(entry.add_update_listener(update_listener))
+    
     # Forward entry setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
     return True
+
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    # Reload the entry when options change
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
