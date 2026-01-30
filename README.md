@@ -18,3 +18,15 @@ After Claude:
 Stuff that still does not work:
 
 - button has a few references to self.hass.  They seem to error out with "'AttributeError: 'HomeAssistant' object has no attribute 'components'"
+
+Continuing with Claude:
+
+_I had to make a few changes.  I had to add timezone awareness to get the correct time, as your code was UTC only.  I also had to offset the time by -2 hours, as the time set on the switchbot was weirdly off by two hours.    The last error I'm seeing is: "AttributeError: 'HomeAssistant' object has no attribute 'components'"_
+
+
+Fixed attributeerror, tried to add offset code, but the code I did worked while the Claude code did not.
+
+
+_datetime.now when converted to timestamp still converts to UTC.  Also, if there is going to be a configurable offset, it should be configurable by device, not just system wide_
+
+Claude did a better job on this one.
