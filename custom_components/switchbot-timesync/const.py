@@ -2,6 +2,9 @@
 
 DOMAIN = "switchbot_meter_time_sync"
 
+# Configuration keys
+CONF_TIME_OFFSET = "time_offset_hours"
+
 # SwitchBot BLE UUIDs
 SERVICE_UUID = "cba20d00-224d-11e6-9fb8-0002a5d5c51b"
 WRITE_CHARACTERISTIC_UUID = "cba20002-224d-11e6-9fb8-0002a5d5c51b"
@@ -23,3 +26,8 @@ DEVICE_TYPE_METER = 0x54  # 'T' - WoSensorTH (Meter/Meter Plus) Normal Mode
 DEVICE_TYPE_METER_ADD = 0x74  # 't' - WoSensorTH Add Mode  
 DEVICE_TYPE_METER_PRO = 0x77  # 'w' - Meter Pro (W3400010)
 DEVICE_TYPE_METER_PRO_CO2 = 0x7A  # 'z' - Meter Pro CO2
+
+# Default time offset in hours (some devices may need adjustment)
+# Set to 0 for most users. If your device shows incorrect time after sync,
+# adjust this value (can be negative, e.g., -2 if device is 2 hours ahead)
+DEFAULT_TIME_OFFSET_HOURS = 0
